@@ -13,23 +13,24 @@ from wandb.integration.keras import WandbMetricsLogger, WandbModelCheckpoint
 #SETTINGS
 ZIP_PATH = "dataset-dronevsbird.zip"
 EXTRACT_DIR = "./data"
-IMG_SIZE = (100, 100)
+IMG_SIZE = (180, 180)
 BATCH_SIZE = 32
-EPOCHS = 3
+EPOCHS = 15
 #DATA PIPELINE
 if not os.path.exists(EXTRACT_DIR):
     with zipfile.ZipFile(ZIP_PATH, 'r') as zip_ref:
         zip_ref.extractall(EXTRACT_DIR)
-
+dataset_path=os.path.join(EXTRACT_DIR,"dataset")
 # Note: Keras loads folders alphabetically: 'bird' = 0, 'drone' = 1
 train_ds = tf.keras.utils.image_dataset_from_directory(
-    EXTRACT_DIR, validation_split=0.2, subset="training", seed=42,
+    dataset_path, validation_split=0.2, subset="training", seed=42,
     image_size=IMG_SIZE, batch_size=BATCH_SIZE
 )
 val_ds = tf.keras.utils.image_dataset_from_directory(
-    EXTRACT_DIR, validation_split=0.2, subset="validation", seed=42,
+    dataset_path, validation_split=0.2, subset="validation", seed=42,
     image_size=IMG_SIZE, batch_size=BATCH_SIZE
 )
+print("Class names found:", train_ds.class_names)
 
 # Optimization for speed
 AUTOTUNE = tf.data.AUTOTUNE
@@ -38,7 +39,8 @@ val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
 
 #THE CNN MODEL
 model = models.Sequential([
-    layers.Input(shape=IMG_SIZE +(3,)),
+    layers.Input(shape=IMG_SIZE +(3,)),layers.RandomFlip("horizontal"),
+    layers.RandomRotation(0.1),layers.RandomZoom(0.1),
     layers.Rescaling(1./255),
     
     # Feature Extraction
